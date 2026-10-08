@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Hôm Nay Ăn Gì?</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;overflow:hidden}
+body{margin:0;font-family:-apple-system,'Be Vietnam Pro','SF Pro Text',Roboto,sans-serif;background:#111;color:#fff;
+  max-width:480px;margin:0 auto;position:relative;-webkit-font-smoothing:antialiased}
+svg.ic{width:18px;height:18px;flex:0 0 auto}
+#stage{position:fixed;inset:0;max-width:480px;margin:0 auto;perspective:1800px;overflow:hidden;background:#111;touch-action:none}
+.page{position:absolute;inset:0;background-size:cover;background-position:center;will-change:transform}
+#pageUnder{z-index:1}
+#pageTop{z-index:2;transform-origin:left center;box-shadow:0 0 60px rgba(0,0,0,.5)}
+#pageTop::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .6s;
+  background:linear-gradient(105deg,transparent 40%,rgba(0,0,0,.45) 100%)}
+#pageTop.flipping::after{opacity:1}
+#pageTop.flipL{transform:rotateY(-168deg);transition:transform .62s cubic-bezier(.35,.05,.25,1)}
+#pageTop.flipR{transform-origin:right center;transform:rotateY(168deg);transition:transform .62s cubic-bezier(.35,.05,.25,1)}
+#pageTop.flipU{transform-origin:center top;transform:rotateX(-168deg);transition:transform .62s cubic-bezier(.35,.05,.25,1)}
+#pageTop.flipD{transform-origin:center bottom;transform:rotateX(168deg);transition:transform .62s cubic-bezier(.35,.05,.25,1)}
+.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.32) 0%,transparent 28%,transparent 52%,rgba(0,0,0,.55) 76%,rgba(0,0,0,.88) 100%);pointer-events:none}
+/* ---- dish content ---- */
+.ptxt{position:absolute;left:0;right:0;bottom:0;padding:24px 26px 88px;pointer-events:none}
+.ptxt>*{pointer-events:auto}
+.overline{font-size:11px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,.72);margin-bottom:10px;text-transform:uppercase}
+.overline b{color:#fff}
+.ptxt h1{font-size:40px;margin:0 0 6px;font-weight:800;letter-spacing:-.8px;line-height:1.12;text-shadow:0 2px 16px rgba(0,0,0,.45)}
+.ptxt .desc{margin:0 0 12px;font-size:15px;line-height:1.5;color:rgba(255,255,255,.85)}
+.metaRow{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:18px}
+.metaRow svg.ic{width:15px;height:15px;opacity:.85}
+.metaRow .dot{opacity:.4}
+.ctaRow{display:flex}
+.cta{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:999px;border:0;cursor:pointer;
+  background:#fff;color:#1c1a17;font-size:15px;font-weight:700;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+.cta svg.ic{width:17px;height:17px}
+.cta:active{transform:scale(.96)}
+/* ---- top bar ---- */
+#topbar{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:space-between;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 0;pointer-events:none}
+#topbar>*{pointer-events:auto}
+#brand{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:800;letter-spacing:-.3px;text-shadow:0 2px 8px rgba(0,0,0,.5);white-space:nowrap}
+#brand .logo{width:34px;height:34px;border-radius:12px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);
+  backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center}
+#brand .logo svg{width:19px;height:19px}
+#topActions{display:flex;align-items:center;gap:10px}
+#mealSeg{display:flex;background:rgba(20,18,16,.42);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(12px);
+  border-radius:999px;padding:3px}
+#mealSeg button{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:rgba(255,255,255,.75);
+  font-size:13px;font-weight:700;padding:7px 13px;border-radius:999px;cursor:pointer}
+#mealSeg button svg{width:14px;height:14px}
+#mealSeg button.on{background:#fff;color:#1c1a17}
+#bellBtn{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.3);cursor:pointer;color:#fff;
+  background:rgba(20,18,16,.42);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center}
+#bellBtn svg{width:18px;height:18px}
+/* ---- bottom meta ---- */
+#counter{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:22px;z-index:5;
+  font-size:11px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.65)}
+#hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);left:22px;z-index:5;
+  font-size:11px;font-weight:600;letter-spacing:1.2px;color:rgba(255,255,255,.65);transition:opacity 1s;text-transform:uppercase}
+/* ---- notification sheet ---- */
+#sheetWrap{position:fixed;inset:0;z-index:20;pointer-events:none}
+#sheetWrap.open{pointer-events:auto}
+#scrim{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .35s}
+#sheetWrap.open #scrim{opacity:1}
+#sheet{position:absolute;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:#191715;color:#f5efe6;
+  border-radius:26px 26px 0 0;padding:14px 22px calc(env(safe-area-inset-bottom,0px) + 26px);
+  transform:translateY(105%);transition:transform .38s cubic-bezier(.32,.9,.35,1)}
+#sheetWrap.open #sheet{transform:none}
+#grab{width:44px;height:5px;border-radius:99px;background:rgba(255,255,255,.22);margin:0 auto 16px}
+#sheet h2{font-size:18px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+#sheet h2 svg{width:20px;height:20px}
+.nrow{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.nrow:last-of-type{border-bottom:0}
+.nrow .tt{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.nrow .tt svg{width:17px;height:17px;opacity:.85}
+.nrow .s{font-size:12px;color:rgba(245,239,230,.55);margin-top:3px}
+.switch{width:52px;height:30px;border-radius:999px;background:rgba(255,255,255,.16);position:relative;transition:background .25s;flex:0 0 auto;cursor:pointer}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .25s;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.switch.on{background:#E8590C}
+.switch.on::after{left:25px}
+#btnTest{width:100%;margin-top:14px;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;
+  background:transparent;color:#f5efe6;border:1px solid rgba(255,255,255,.25)}
+/* ---- recipe sheet ---- */
+#recipeWrap{position:fixed;inset:0;z-index:30;display:none}
+#recipeWrap.open{display:block}
+#rScrim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+#rSheet{position:absolute;left:0;right:0;bottom:0;top:7%;max-width:480px;margin:0 auto;background:#FBF8F3;
+  border-radius:28px 28px 0 0;overflow:hidden;display:flex;flex-direction:column;
+  animation:sheetUp .4s cubic-bezier(.32,.9,.35,1)}
+@keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+#rHead{position:relative;height:200px;flex:0 0 auto;background-size:cover;background-position:center}
+#rHead::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,transparent 40%,rgba(0,0,0,.72) 100%)}
+#rClose{position:absolute;top:14px;right:14px;z-index:2;width:38px;height:38px;border-radius:50%;border:0;cursor:pointer;
+  background:rgba(0,0,0,.45);color:#fff;backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center}
+#rClose svg{width:16px;height:16px}
+#rTitle{position:absolute;bottom:16px;left:22px;right:22px;z-index:1;color:#fff}
+#rTitle .overline{color:rgba(255,255,255,.75);margin-bottom:6px}
+#rTitle h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.5px}
+#rBody{overflow-y:auto;padding:22px;-webkit-overflow-scrolling:touch}
+.secHead{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.secHead .badge{width:34px;height:34px;border-radius:12px;background:#E8590C;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.secHead .badge svg{width:17px;height:17px;stroke:#fff}
+.secHead h3{font-size:17px;margin:0;color:#241c14;font-weight:800}
+.secHead .cnt{margin-left:auto;font-size:12px;font-weight:700;color:#a08b70}
+.ingGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:28px}
+.ing{background:#fff;border:1px solid #f1e7d6;border-radius:18px;padding:14px 6px 12px;text-align:center;box-shadow:0 4px 14px rgba(120,70,20,.05)}
+.ing .ic{width:48px;height:48px;border-radius:50%;background:#FDF1E3;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 8px}
+.ing .nm{font-size:12px;font-weight:700;color:#241c14;line-height:1.35}
+.ing .qt{font-size:11px;color:#a08b70;margin-top:3px}
+.step{display:flex;gap:14px;margin-bottom:6px;padding:12px 0;border-bottom:1px solid #f1e7d6}
+.step:last-child{border-bottom:0}
+.step .num{flex:0 0 32px;width:32px;height:32px;border-radius:50%;background:#241c14;
+  color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center}
+.step .tx{font-size:14.5px;color:#4a3d30;line-height:1.65;padding-top:5px}
+
+.comboRow{display:flex;gap:10px;margin:2px 0 16px;overflow-x:auto;scrollbar-width:none}
+.comboRow::-webkit-scrollbar{display:none}
+.comboCard{flex:0 0 auto;width:118px;cursor:pointer;opacity:.75;transition:opacity .2s}
+.comboCard.on{opacity:1}
+.comboCard img{width:118px;height:74px;object-fit:cover;border-radius:14px;display:block;border:2px solid transparent}
+.comboCard.on img{border-color:#fff}
+.comboCard span{display:block;font-size:11px;font-weight:700;margin-top:6px;line-height:1.35;color:rgba(255,255,255,.92);text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.comboLabel{font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,.65);margin-bottom:8px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="page" id="pageUnder"></div>
+  <div class="page" id="pageTop"></div>
+  <div id="topbar">
+    <div id="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"/><path d="M5 18a7 7 0 0 1 14 0"/><path d="M12 11V9"/><circle cx="12" cy="8" r="1"/></svg></span><span>Hôm Nay Ăn Gì?</span></div>
+    <div id="topActions">
+      <div id="mealSeg">
+        <button data-m="trua"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Trưa</button>
+        <button data-m="toi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Tối</button>
+      </div>
+      <button id="bellBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
+    </div>
+  </div>
+  <div id="hint">Vuốt để đổi món</div>
+  <div id="counter"></div>
+</div>
+
+<div id="sheetWrap">
+  <div id="scrim"></div>
+  <div id="sheet">
+    <div id="grab"></div>
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Nhắc bữa ăn</h2>
+    <div class="nrow">
+      <div><div class="tt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Nhắc bữa trưa</div><div class="s">Thông báo lúc 11:00 mỗi ngày</div></div>
+      <div class="switch" id="swTrua"></div>
+    </div>
+    <div class="nrow">
+      <div><div class="tt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Nhắc bữa tối</div><div class="s">Thông báo lúc 17:00 mỗi ngày</div></div>
+      <div class="switch" id="swToi"></div>
+    </div>
+    <button id="btnTest">Gửi thử thông báo ngay</button>
+  </div>
+</div>
+
+<script src="recipes.js"></script>
+<script>
+const DISHES=[
+ ["Cơm tấm sườn bì chả","man","Sườn nướng thơm phức, bì thính, chả trứng béo ngậy","45 phút"],
+ ["Thịt kho tàu","man","Thịt ba chỉ kho trứng với nước dừa béo ngậy","60 phút"],
+ ["Cá kho tộ","man","Cá lóc kho tộ đậm đà, cay nhẹ đưa cơm","40 phút"],
+ ["Gà xào sả ớt","man","Gà ta xào sả ớt cay thơm nức mũi","30 phút"],
+ ["Bò lúc lắc","man","Bò cube mềm xào hành tây, khoai tây chiên","25 phút"],
+ ["Tôm rim thịt","man","Tôm rim mặn ngọt ăn với cơm nóng","30 phút"],
+ ["Canh chua cá lóc","canh","Chua cay đậm chất miền Tây","35 phút"],
+ ["Canh khổ qua nhồi thịt","canh","Thanh mát, giải nhiệt ngày nóng","40 phút"],
+ ["Rau muống xào tỏi","phu","Giòn xanh, thơm tỏi đơn giản","15 phút"],
+ ["Đậu hũ sốt cà chua","man","Chay mặn đều ngon, dễ làm","20 phút"],
+ ["Cơm gà Hội An","man","Gà luộc xé phay, cơm nấu nghệ vàng","50 phút"],
+ ["Sườn xào chua ngọt","man","Sườn non sốt chua ngọt bắt cơm","35 phút"],
+ ["Cá chiên mắm xoài","man","Cá giòn rụm, mắm xoài chua cay","30 phút"],
+ ["Trứng chiên thịt bằm","man","Nhanh gọn lẹ cho ngày bận","15 phút"],
+ ["Canh bí đỏ nấu tôm","canh","Ngọt bùi, bổ dưỡng","25 phút"],
+ ["Phở bò","nuoc","Nước dùng trong veo, bò tái nạm gầu","90 phút"],
+ ["Bún bò Huế","nuoc","Cay nồng đậm đà xứ Huế","90 phút"],
+ ["Hủ tiếu Nam Vang","nuoc","Tôm thịt hoành thánh đầy đủ","60 phút"],
+ ["Mì Quảng","nuoc","Đậm đà, đậu phộng, bánh tráng","60 phút"],
+ ["Bún chả Hà Nội","nuoc","Chả nướng than hoa thơm lừng","50 phút"],
+ ["Bún riêu cua","nuoc","Riêu cua đồng béo ngậy","60 phút"],
+ ["Bánh canh cua","nuoc","Sợi bột gạo dai, cua tươi","50 phút"],
+ ["Cháo lòng","nuoc","Lòng heo đầy đủ, hành ngò","70 phút"],
+ ["Mì vịt tiềm","nuoc","Vịt tiềm thuốc bắc bổ dưỡng","90 phút"],
+ ["Bún mắm","nuoc","Mắm cá linh đặc sản miền Tây","60 phút"],
+ ["Hủ tiếu bò kho","nuoc","Bò kho mềm thơm, bánh mì giòn","80 phút"],
+ ["Phở gà","nuoc","Thanh ngọt, dễ ăn dễ nấu","70 phút"],
+ ["Bún cá Châu Đốc","nuoc","Cá lóc, nghệ vàng ươm","55 phút"],
+ ["Mì xào giòn hải sản","nuoc","Sợi mì giòn rụm, hải sản tươi","30 phút"],
+ ["Cháo gà","nuoc","Ấm bụng ngày mưa gió","60 phút"],
+ ["Đậu hũ kho nấm","chay","Đậm đà đưa cơm","25 phút"],
+ ["Canh chua chay","canh","Dứa, cà chua, đậu bắp thanh mát","25 phút"],
+ ["Nấm xào sả ớt","chay","Thơm cay nức mũi","20 phút"],
+ ["Bún chay Huế","chay","Nước dùng rau củ ngọt thanh","45 phút"],
+ ["Cơm chiên dương châu chay","chay","Đủ màu sắc bắt mắt","25 phút"],
+ ["Gỏi cuốn chay","chay","Tươi mát chấm tương","30 phút"],
+ ["Cà tím nướng mỡ hành","chay","Béo thơm khó cưỡng","20 phút"],
+ ["Rau củ kho chay","chay","Thập cẩm đậm đà","30 phút"],
+ ["Mì căn xào","chay","Dai ngon sần sật","20 phút"],
+ ["Bánh xèo chay","chay","Giòn rụm, rau sống","40 phút"],
+ ["Lẩu nấm chay","chay","Sum họp cuối tuần","50 phút"],
+ ["Chè đậu đen","trangmieng","Tráng miệng mát lạnh","40 phút"],
+ ["Bánh tráng trộn","phu","Chua cay mặn ngọt gây nghiện","15 phút"],
+ ["Gỏi cuốn tôm thịt","phu","Chấm mắm nêm đậm đà","30 phút"],
+ ["Bò bía","phu","Ngọt thanh, cuốn tay vui","25 phút"],
+ ["Bánh mì pate","phu","Giòn nóng hổi","10 phút"],
+ ["Chè thái","trangmieng","Béo thơm sầu riêng","20 phút"],
+ ["Tàu hũ đá","trangmieng","Mát lạnh ngày nóng","15 phút"],
+ ["Bắp xào tép","phu","Béo mặn thơm bơ","15 phút"],
+ ["Bánh flan","trangmieng","Mềm mịn tan trong miệng","40 phút"],
+ ["Gỏi đu đủ bò khô","phu","Giòn chua cay","20 phút"],
+ ["Xôi xoài","trangmieng","Dẻo thơm nước cốt dừa","30 phút"],
+ ["Bánh tiêu","trangmieng","Phồng xốp","30 phút"],
+ ["Chè bưởi","trangmieng","Thanh mát giòn sần sật","45 phút"],
+ ["Thịt ba chỉ rang cháy cạnh","man","Rang cháy cạnh mặn ngọt đậm đà","25 phút"],
+ ["Sườn non kho thơm","man","Sườn mềm, dứa chua ngọt","40 phút"],
+ ["Heo quay kho cải chua","man","Heo quay giòn bì kho cải chua","35 phút"],
+ ["Gà kho gừng","man","Gà ta kho gừng ấm bụng","35 phút"],
+ ["Gà rang muối","man","Da giòn thơm mùi sả","40 phút"],
+ ["Vịt kho gừng","man","Vịt mềm thơm gừng sả","50 phút"],
+ ["Vịt nấu chao","man","Béo ngậy chao, khoai môn bùi","55 phút"],
+ ["Bò xào hành tây","man","Bò mềm, hành tây ngọt thanh","20 phút"],
+ ["Bò kho gừng sả","man","Bò mềm thơm sả gừng","60 phút"],
+ ["Cá thu sốt cà chua","man","Cá thu béo sốt cà đậm đà","30 phút"],
+ ["Cá basa kho tộ","man","Kho tộ cay nhẹ đưa cơm","35 phút"],
+ ["Cá nục kho cà","man","Cá nục kho cà chua mặn ngọt","40 phút"],
+ ["Cá diêu hồng hấp xì dầu","man","Hấp xì dầu gừng thơm","30 phút"],
+ ["Tôm kho tàu","man","Tôm rim mặn ngọt gạch đỏ au","25 phút"],
+ ["Mực xào chua ngọt","man","Mực giòn sần sật","20 phút"],
+ ["Mực nhồi thịt","man","Mực nhồi thịt hấp sốt cà","35 phút"],
+ ["Chả giò chiên","man","Giòn rụm nhân thịt mộc nhĩ","40 phút"],
+ ["Nem nướng","man","Nem nướng thơm cuốn bánh tráng","45 phút"],
+ ["Thịt đông","man","Thịt đông trong veo ngày Tết","90 phút"],
+ ["Giò heo hầm măng","man","Giò heo mềm, măng chua","70 phút"],
+ ["Ếch xào sả ớt","man","Ếch đồng xào sả ớt cay thơm","25 phút"],
+ ["Lươn xào sả ớt","man","Lươn đồng dai ngọt","30 phút"],
+ ["Ốc bươu xào sả","man","Ốc bươu béo xào sả ớt","25 phút"],
+ ["Chả cá Lã Vọng","man","Chả cá lăng nướng nghệ thì là","40 phút"],
+ ["Cá lóc nướng trui","man","Nướng trui thơm lừng rơm","40 phút"],
+ ["Tôm càng nướng muối ớt","man","Tôm càng nướng cay xè","25 phút"],
+ ["Hến xào xúc bánh tráng","man","Hến xào sả ớt xúc bánh đa","20 phút"],
+ ["Bê thui cuốn bánh tráng","man","Bê thui mềm cuốn rau","60 phút"],
+ ["Dê xào lăn","man","Thịt dê xào lăn sả ớt","30 phút"],
+ ["Thịt kho măng","man","Thịt ba chỉ kho măng tươi","45 phút"],
+ ["Cá kèo kho rau răm","man","Cá kèo kho cay rau răm","30 phút"],
+ ["Cá linh kho mía","man","Đặc sản miền Tây mùa nước nổi","50 phút"],
+ ["Lẩu cá kèo","man","Lẩu cá kèo lá giang chua thanh","50 phút"],
+ ["Gà hấp lá chanh","man","Gà hấp thơm lá chanh","40 phút"],
+ ["Gà nướng mật ong","man","Da vàng óng mật ong","50 phút"],
+ ["Chân gà sả tắc","man","Giòn sần sật chua cay","30 phút"],
+ ["Sụn gà rang muối","man","Sụn gà giòn tan","25 phút"],
+ ["Bò né","man","Bò né ốp la pate nóng hổi","20 phút"],
+ ["Bò bít tết","man","Bít tết sốt tiêu đen","25 phút"],
+ ["Thịt trâu gác bếp","man","Đặc sản Tây Bắc","30 phút"],
+ ["Pa pỉnh tộp","man","Cá nướng mắc khén Tây Bắc","40 phút"],
+ ["Cơm lam gà nướng","man","Cơm lam ống tre thơm","60 phút"],
+ ["Heo rừng xào lăn","man","Heo rừng dai ngọt","30 phút"],
+ ["Nhím hấp","man","Thịt nhím hấp sả","40 phút"],
+ ["Cua rang me","man","Cua rang me chua ngọt","30 phút"],
+ ["Ghẹ hấp bia","man","Ghẹ hấp bia sả thơm","25 phút"],
+ ["Tôm hùm nướng phô mai","man","Tôm hùm nướng béo ngậy","35 phút"],
+ ["Bạch tuộc nướng","man","Bạch tuộc nướng sa tế","25 phút"],
+ ["Sá sùng xào","man","Đặc sản Quan Lạn","20 phút"],
+ ["Sam nướng","man","Sam nướng mỡ hành","30 phút"],
+ ["Cá mú hấp Hồng Kông","man","Cá mú hấp xì dầu","35 phút"],
+ ["Cá chẽm sốt chanh dây","man","Chua ngọt thanh mát","30 phút"],
+ ["Cá hồi sốt bơ tỏi","man","Cá hồi áp chảo bơ tỏi","20 phút"],
+ ["Cá ngừ kho thơm","man","Cá ngừ kho dứa","40 phút"],
+ ["Mắm kho","man","Mắm kho thịt ba chỉ cà tím","40 phút"],
+ ["Ba khía rang me","man","Ba khía rang me chua cay","20 phút"],
+ ["Tép rang khế","man","Tép đồng rang khế chua","20 phút"],
+ ["Cá cơm kho tiêu","man","Cá cơm kho tiêu cay","25 phút"],
+ ["Trứng cút kho thịt","man","Trứng cút kho tàu mini","35 phút"],
+ ["Đậu hũ nhồi thịt sốt cà","man","Đậu hũ nhồi thịt rim cà","30 phút"],
+ ["Chả lụa kho tiêu","man","Chả lụa kho tiêu đơn giản","20 phút"],
+ ["Xúc xích xào chua ngọt","man","Món khoái khẩu trẻ con","15 phút"],
+ ["Cánh gà chiên nước mắm","man","Cánh gà giòn sốt mắm","30 phút"],
+ ["Đùi gà rô ti","man","Đùi gà rô ti đậm đà","40 phút"],
+ ["Sườn nướng BBQ","man","Sườn nướng sốt BBQ","50 phút"],
+ ["Thịt xiên nướng","man","Thịt xiên nướng than hoa","35 phút"],
+ ["Bún thịt nướng","man","Thịt nướng ăn bún mắm nêm","40 phút"],
+ ["Canh rau ngót thịt bằm","canh","Ngọt thanh giải nhiệt","20 phút"],
+ ["Canh mồng tơi nấu tôm","canh","Mồng tơi nhớt ngọt tôm","20 phút"],
+ ["Canh cải xanh thịt bằm","canh","Cải xanh nấu thịt bằm","20 phút"],
+ ["Canh chua tôm","canh","Chua thanh dọc mùng","25 phút"],
+ ["Canh cá nấu ngót","canh","Cá nấu ngót cà chua thì là","25 phút"],
+ ["Canh bầu nấu tôm","canh","Bầu non nấu tôm ngọt","20 phút"],
+ ["Canh bí đao sườn non","canh","Bí đao thanh mát","35 phút"],
+ ["Canh khoai mỡ","canh","Khoai mỡ dẻo tím","25 phút"],
+ ["Canh rau dền tôm","canh","Rau dền đỏ nấu tôm","20 phút"],
+ ["Canh tập tàng","canh","Rau tập tàng cua đồng","30 phút"],
+ ["Canh hến nấu chua","canh","Hến nấu khế chua","25 phút"],
+ ["Canh ngao nấu dứa","canh","Ngao nấu dứa chua ngọt","20 phút"],
+ ["Canh sườn hầm củ sen","canh","Bổ dưỡng thanh mát","60 phút"],
+ ["Canh gà hầm thuốc bắc","canh","Gà ác hầm bổ dưỡng","90 phút"],
+ ["Canh đuôi heo hầm","canh","Đuôi heo hầm củ quả","70 phút"],
+ ["Canh sườn non nấu sấu","canh","Chua thanh sấu Hà Nội","40 phút"],
+ ["Canh riêu cá","canh","Riêu cá chua dọc mùng","30 phút"],
+ ["Canh chua lươn","canh","Lươn nấu chua bắp chuối","35 phút"],
+ ["Canh măng chua cá","canh","Măng chua nấu cá","30 phút"],
+ ["Canh kim chi thịt bò","canh","Cay nồng kiểu Hàn","25 phút"],
+ ["Canh rong biển thịt bò","canh","Rong biển bổ dưỡng","20 phút"],
+ ["Canh đậu hũ non hẹ","canh","Thanh đạm dễ ăn","15 phút"],
+ ["Canh trứng cà chua","canh","Nhanh gọn 10 phút","15 phút"],
+ ["Canh mướp nấu lạc","canh","Mướp hương nấu lạc","20 phút"],
+ ["Canh hoa thiên lý","canh","Hoa thiên lý nấu tôm","20 phút"],
+ ["Canh atiso hầm","canh","Atiso hầm giò heo","60 phút"],
+ ["Canh củ quả thập cẩm","canh","Ngọt tự nhiên rau củ","30 phút"],
+ ["Canh khoai tây thịt bằm","canh","Khoai tây bùi thịt bằm","25 phút"],
+ ["Canh su hào thịt bằm","canh","Su hào giòn ngọt","25 phút"],
+ ["Canh cải thảo nấu tôm","canh","Cải thảo ngọt thanh","20 phút"],
+ ["Canh nấm thập cẩm","canh","Nấm các loại ngọt","20 phút"],
+ ["Canh chua chay thập cẩm","canh","Chay thanh mát","25 phút"],
+ ["Lẩu thái chua cay","canh","Lẩu thái hải sản","40 phút"],
+ ["Lẩu riêu cua bắp bò","canh","Riêu cua bắp bò sụn","60 phút"],
+ ["Lẩu gà lá giang","canh","Chua thanh lá giang","50 phút"],
+ ["Bún thang","nuoc","Tinh tế ẩm thực Hà thành","70 phút"],
+ ["Bún ốc","nuoc","Ốc bươu giòn chua thanh","60 phút"],
+ ["Bún măng gà","nuoc","Măng chua gà ta","55 phút"],
+ ["Bún sườn chua","nuoc","Sườn non nấu sấu","60 phút"],
+ ["Miến gà","nuoc","Miến dong gà ta","45 phút"],
+ ["Miến lươn","nuoc","Lươn đồng giòn","50 phút"],
+ ["Phở cuốn","nuoc","Cuốn thịt bò rau thơm","40 phút"],
+ ["Bánh đa cua","nuoc","Đặc sản Hải Phòng","60 phút"],
+ ["Bún hải sản","nuoc","Tôm mực đầy ắp","45 phút"],
+ ["Mì hoành thánh","nuoc","Hoành thánh tôm thịt","50 phút"],
+ ["Cao lầu","nuoc","Đặc sản Hội An","70 phút"],
+ ["Bún bò Nam Bộ","nuoc","Bò xào trộn mắm chua ngọt","35 phút"],
+ ["Đậu hũ chiên sả","chay","Đậu hũ chiên sả ớt giòn","20 phút"],
+ ["Nấm đùi gà kho tiêu","chay","Kho tiêu cay thơm","25 phút"],
+ ["Bò kho chay","chay","Bò lát chay kho sả","40 phút"],
+ ["Cà ri chay","chay","Cà ri cốt dừa béo","40 phút"],
+ ["Hủ tiếu chay","chay","Nước dùng rau củ ngọt","45 phút"],
+ ["Phở chay","chay","Phở chay thanh tịnh","50 phút"],
+ ["Bún riêu chay","chay","Riêu đậu hũ cà chua","45 phút"],
+ ["Chả giò chay","chay","Giòn rụm nhân chay","35 phút"],
+ ["Gỏi ngó sen chay","chay","Giòn chua ngọt","25 phút"],
+ ["Đậu hũ Tứ Xuyên chay","chay","Cay tê kiểu Tứ Xuyên","25 phút"],
+ ["Nấm kho tộ chay","chay","Nấm kho tộ đậm đà","25 phút"],
+ ["Canh kiểm chay","chay","Kiểm thập cẩm cốt dừa","40 phút"],
+ ["Bánh ướt chay","chay","Bánh ướt nhân chay","30 phút"],
+ ["Cơm tấm chay","chay","Sườn bì chả chay","40 phút"],
+ ["Lẩu chay thập cẩm","chay","Sum họp ngày rằm","50 phút"],
+ ["Rau lang xào tỏi","phu","Rau lang non xào tỏi","15 phút"],
+ ["Cải thìa xào nấm","phu","Cải thìa giòn xào nấm","15 phút"],
+ ["Bông cải xào thịt","phu","Bông cải xanh xào thịt","20 phút"],
+ ["Đậu que xào thịt bằm","phu","Đậu que giòn xào thịt","20 phút"],
+ ["Su su xào tỏi","phu","Su su non xào tỏi","15 phút"],
+ ["Nộm gà xé phay","phu","Gà xé trộn hành tây","25 phút"],
+ ["Nộm tai heo","phu","Tai heo giòn sần sật","30 phút"],
+ ["Gỏi ngó sen tôm thịt","phu","Ngó sen giòn chua ngọt","30 phút"],
+ ["Dưa chua","phu","Dưa cải muối chua","20 phút"],
+ ["Cà pháo mắm tôm","phu","Giòn tan chấm mắm tôm","15 phút"],
+ ["Kim chi cải thảo","phu","Cay giòn kiểu Hàn","30 phút"],
+ ["Salad dầu giấm","phu","Tươi mát giảm ngán","15 phút"],
+ ["Khoai tây chiên","phu","Giòn rụm chấm tương","20 phút"],
+ ["Ngô chiên bơ","phu","Ngô chiên bơ tỏi","20 phút"],
+ ["Chả ram bắp","phu","Chả ram bắp giòn","30 phút"],
+ ["Gỏi bưởi tôm thịt","phu","Bưởi chua ngọt tôm thịt","25 phút"],
+ ["Nộm hoa chuối","phu","Hoa chuối giòn tai heo","25 phút"],
+ ["Dưa leo trộn","phu","Dưa leo trộn chua ngọt","10 phút"],
+ ["Rau củ luộc chấm kho quẹt","phu","Kho quẹt đậm đà","25 phút"],
+ ["Bắp cải xào","phu","Bắp cải xào tỏi đơn giản","15 phút"],
+ ["Mướp xào lòng gà","phu","Mướp hương xào lòng","20 phút"],
+ ["Thiên lý xào tỏi","phu","Hoa thiên lý xào","15 phút"],
+ ["Càng cua xào me","phu","Chua ngọt lai rai","20 phút"],
+ ["Sụn gà xào sả ớt","phu","Giòn cay nhậu ngon","20 phút"],
+ ["Da heo chiên giòn","phu","Da heo chiên phồng","25 phút"],
+ ["Chè đậu xanh","trangmieng","Đậu xanh đánh nhuyễn","40 phút"],
+ ["Chè trôi nước","trangmieng","Trôi nước nhân đậu xanh","50 phút"],
+ ["Chè khúc bạch","trangmieng","Mềm mịn hạnh nhân","40 phút"],
+ ["Sữa chua nếp cẩm","trangmieng","Nếp cẩm dẻo sữa chua","30 phút"],
+ ["Bánh da lợn","trangmieng","Dai dẻo lá dứa","45 phút"],
+ ["Bánh ít trần","trangmieng","Nhân tôm thịt đậu xanh","40 phút"],
+ ["Chè sen long nhãn","trangmieng","Sen bùi long nhãn ngọt","45 phút"],
+ ["Rau câu dừa","trangmieng","Mát lạnh giòn sần sật","30 phút"],
+ ["Bánh bò nướng","trangmieng","Thơm rễ tre","50 phút"],
+ ["Kem xôi dừa","trangmieng","Xôi dẻo kem mát","25 phút"],
+];
+
+const I={
+cloche:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"/><path d="M5 18a7 7 0 0 1 14 0"/><path d="M12 11V9"/><circle cx="12" cy="8" r="1"/></svg>',
+bell:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+clock:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+flame:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+arrow:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+basket:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 11 4-7"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.6-7.4"/></svg>',
+chef:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><path d="M6 17h12"/></svg>'
+};
+const CATS={man:"Món mặn",canh:"Canh",phu:"Món phụ",nuoc:"Món nước",chay:"Món chay",trangmieng:"Tráng miệng"};
+const MEALN={trua:"Bữa trưa",toi:"Bữa tối"};
+const difficulty=t=>{const m=parseInt(t);return m<=20?"Dễ làm":m<=45?"Vừa sức":"Kỳ công";};
+
+const IMG={
+  "Cơm tấm sườn bì chả":"img/com-tam-suon-bi-cha.jpg",
+  "Thịt kho tàu":"img/thit-kho-tau.jpg",
+  "Cá kho tộ":"img/ca-kho-to.jpg",
+  "Gà xào sả ớt":"img/ga-xao-sa-ot.jpg",
+  "Bò lúc lắc":"img/bo-luc-lac.jpg",
+  "Tôm rim thịt":"img/tom-rim-thit.jpg",
+  "Canh chua cá lóc":"img/canh-chua-ca-loc.jpg",
+  "Canh khổ qua nhồi thịt":"img/canh-kho-qua-nhoi-thit.jpg",
+  "Rau muống xào tỏi":"img/rau-muong-xao-toi.jpg",
+  "Đậu hũ sốt cà chua":"img/au-hu-sot-ca-chua.jpg",
+  "Cơm gà Hội An":"img/com-ga-hoi-an.jpg",
+  "Sườn xào chua ngọt":"img/suon-xao-chua-ngot.jpg",
+  "Cá chiên mắm xoài":"img/ca-chien-mam-xoai.jpg",
+  "Trứng chiên thịt bằm":"img/trung-chien-thit-bam.jpg",
+  "Canh bí đỏ nấu tôm":"img/canh-bi-o-nau-tom.jpg",
+  "Phở bò":"img/pho-bo.jpg",
+  "Bún bò Huế":"img/bun-bo-hue.jpg",
+  "Hủ tiếu Nam Vang":"img/hu-tieu-nam-vang.jpg",
+  "Mì Quảng":"img/mi-quang.jpg",
+  "Bún chả Hà Nội":"img/bun-cha-ha-noi.jpg",
+  "Bún riêu cua":"img/bun-rieu-cua.jpg",
+  "Bánh canh cua":"img/banh-canh-cua.jpg",
+  "Cháo lòng":"img/chao-long.jpg",
+  "Mì vịt tiềm":"img/mi-vit-tiem.jpg",
+  "Bún mắm":"img/bun-mam.jpg",
+  "Hủ tiếu bò kho":"img/hu-tieu-bo-kho.jpg",
+  "Phở gà":"img/pho-ga.jpg",
+  "Bún cá Châu Đốc":"img/bun-ca-chau-oc.jpg",
+  "Mì xào giòn hải sản":"img/mi-xao-gion-hai-san.jpg",
+  "Cháo gà":"img/chao-ga.jpg",
+  "Đậu hũ kho nấm":"img/au-hu-kho-nam.jpg",
+  "Canh chua chay":"img/canh-chua-chay.jpg",
+  "Nấm xào sả ớt":"img/nam-xao-sa-ot.jpg",
+  "Bún chay Huế":"img/bun-chay-hue.jpg",
+  "Cơm chiên dương châu chay":"img/com-chien-duong-chau-chay.jpg",
+  "Gỏi cuốn chay":"img/goi-cuon-chay.jpg",
+  "Cà tím nướng mỡ hành":"img/ca-tim-nuong.jpg",
+  "Rau củ kho chay":"img/rau-cu-kho-chay.jpg",
+  "Mì căn xào":"img/mi-can-xao.jpg",
+  "Bánh xèo chay":"img/banh-xeo-chay.jpg",
+  "Lẩu nấm chay":"img/lau-nam-chay.jpg",
+  "Chè đậu đen":"img/che-au-en.jpg",
+  "Bánh tráng trộn":"img/banh-trang-tron.jpg",
+  "Gỏi cuốn tôm thịt":"img/goi-cuon-tom-thit.jpg",
+  "Bò bía":"img/bo-bia.jpg",
+  "Bánh mì pate":"img/banh-mi-pate.jpg",
+  "Chè thái":"img/che-thai.jpg",
+  "Tàu hũ đá":"img/tau-hu-a.jpg",
+  "Bắp xào tép":"img/bap-xao-tep.jpg",
+  "Bánh flan":"img/banh-flan.jpg",
+  "Gỏi đu đủ bò khô":"img/goi-u-u-bo-kho.jpg",
+  "Xôi xoài":"img/xoi-xoai.jpg",
+  "Bánh tiêu":"img/banh-tieu.jpg",
+  "Chè bưởi":"img/che-buoi.jpg",
+  "Chè trôi nước":"img/che-troi-nuoc.jpg",
+  "Càng cua xào me":"img/cang-cua-xao-me.jpg",
+  "Da heo chiên giòn":"img/da-heo-chien-gion.jpg",
+  "Chè khúc bạch":"img/che-khuc-bach.jpg",
+  "Sữa chua nếp cẩm":"img/sua-chua-nep-cam.jpg",
+  "Bánh da lợn":"img/banh-da-lon.jpg",
+  "Bánh ít trần":"img/banh-it-tran.jpg",
+  "Chè sen long nhãn":"img/che-sen-long-nhan.jpg",
+  "Rau câu dừa":"img/rau-cau-dua.jpg",
+  "Bánh bò nướng":"img/banh-bo-nuong.jpg",
+  "Kem xôi dừa":"img/kem-xoi-dua.jpg",
+  "Thịt ba chỉ rang cháy cạnh":"img/thit-ba-chi-rang-chay-canh.jpg",
+  "Sườn non kho thơm":"img/suon-non-kho-thom.jpg",
+  "Heo quay kho cải chua":"img/heo-quay-kho-cai-chua.jpg",
+  "Gà kho gừng":"img/ga-kho-gung.jpg",
+  "Gà rang muối":"img/ga-rang-muoi.jpg",
+  "Vịt kho gừng":"img/vit-kho-gung.jpg",
+  "Vịt nấu chao":"img/vit-nau-chao.jpg",
+  "Bò xào hành tây":"img/bo-xao-hanh-tay.jpg",
+  "Bò kho gừng sả":"img/bo-kho-gung-sa.jpg",
+  "Cá thu sốt cà chua":"img/ca-thu-sot-ca-chua.jpg",
+  "Cá basa kho tộ":"img/ca-basa-kho-to.jpg",
+  "Cá nục kho cà":"img/ca-nuc-kho-ca.jpg",
+  "Cá diêu hồng hấp xì dầu":"img/ca-dieu-hong-hap-xi-dau.jpg",
+  "Tôm kho tàu":"img/tom-kho-tau.jpg",
+  "Mực xào chua ngọt":"img/muc-xao-chua-ngot.jpg",
+  "Mực nhồi thịt":"img/muc-nhoi-thit.jpg",
+  "Chả giò chiên":"img/cha-gio-chien.jpg",
+  "Nem nướng":"img/nem-nuong.jpg",
+  "Thịt đông":"img/thit-ong.jpg",
+  "Giò heo hầm măng":"img/gio-heo-ham-mang.jpg",
+  "Ếch xào sả ớt":"img/ech-xao-sa-ot.jpg",
+  "Lươn xào sả ớt":"img/luon-xao-sa-ot.jpg",
+  "Ốc bươu xào sả":"img/oc-buou-xao-sa.jpg",
+  "Chả cá Lã Vọng":"img/cha-ca-la-vong.jpg",
+  "Cá lóc nướng trui":"img/ca-loc-nuong-trui.jpg",
+  "Tôm càng nướng muối ớt":"img/tom-cang-nuong-muoi-ot.jpg",
+  "Hến xào xúc bánh tráng":"img/hen-xao-xuc-banh-trang.jpg",
+  "Bê thui cuốn bánh tráng":"img/be-thui-cuon-banh-trang.jpg",
+  "Dê xào lăn":"img/de-xao-lan.jpg",
+  "Thịt kho măng":"img/thit-kho-mang.jpg",
+  "Cá kèo kho rau răm":"img/ca-keo-kho-rau-ram.jpg",
+  "Cá linh kho mía":"img/ca-linh-kho-mia.jpg",
+  "Lẩu cá kèo":"img/lau-ca-keo.jpg",
+  "Gà hấp lá chanh":"img/ga-hap-la-chanh.jpg",
+  "Gà nướng mật ong":"img/ga-nuong-mat-ong.jpg",
+  "Chân gà sả tắc":"img/chan-ga-sa-tac.jpg",
+  "Sụn gà rang muối":"img/sun-ga-rang-muoi.jpg",
+  "Bò né":"img/bo-ne.jpg",
+  "Bò bít tết":"img/bo-bit-tet.jpg",
+  "Thịt trâu gác bếp":"img/thit-trau-gac-bep.jpg",
+  "Pa pỉnh tộp":"img/pa-pinh-top.jpg",
+  "Cơm lam gà nướng":"img/com-lam-ga-nuong.jpg",
+  "Heo rừng xào lăn":"img/heo-rung-xao-lan.jpg",
+  "Nhím hấp":"img/nhim-hap.jpg",
+  "Cua rang me":"img/cua-rang-me.jpg",
+  "Ghẹ hấp bia":"img/ghe-hap-bia.jpg",
+  "Tôm hùm nướng phô mai":"img/tom-hum-nuong-pho-mai.jpg",
+  "Bạch tuộc nướng":"img/bach-tuoc-nuong.jpg",
+  "Sá sùng xào":"img/sa-sung-xao.jpg",
+  "Sam nướng":"img/sam-nuong.jpg",
+  "Cá mú hấp Hồng Kông":"img/ca-mu-hap-hong-kong.jpg",
+  "Cá chẽm sốt chanh dây":"img/ca-chem-sot-chanh-day.jpg",
+  "Cá hồi sốt bơ tỏi":"img/ca-hoi-sot-bo-toi.jpg",
+  "Cá ngừ kho thơm":"img/ca-ngu-kho-thom.jpg",
+  "Mắm kho":"img/mam-kho.jpg",
+  "Ba khía rang me":"img/ba-khia-rang-me.jpg",
+  "Tép rang khế":"img/tep-rang-khe.jpg",
+  "Cá cơm kho tiêu":"img/ca-com-kho-tieu.jpg",
+  "Trứng cút kho thịt":"img/trung-cut-kho-thit.jpg",
+  "Đậu hũ nhồi thịt sốt cà":"img/au-hu-nhoi-thit-sot-ca.jpg",
+  "Chả lụa kho tiêu":"img/cha-lua-kho-tieu.jpg",
+  "Xúc xích xào chua ngọt":"img/xuc-xich-xao-chua-ngot.jpg",
+  "Cánh gà chiên nước mắm":"img/canh-ga-chien-nuoc-mam.jpg",
+  "Đùi gà rô ti":"img/ui-ga-ro-ti.jpg",
+  "Sườn nướng BBQ":"img/suon-nuong-bbq.jpg",
+  "Thịt xiên nướng":"img/thit-xien-nuong.jpg",
+  "Bún thịt nướng":"img/bun-thit-nuong.jpg",
+  "Canh rau ngót thịt bằm":"img/canh-rau-ngot-thit-bam.jpg",
+  "Canh mồng tơi nấu tôm":"img/canh-mong-toi-nau-tom.jpg",
+  "Canh cải xanh thịt bằm":"img/canh-cai-xanh-thit-bam.jpg",
+  "Canh chua tôm":"img/canh-chua-tom.jpg",
+  "Canh cá nấu ngót":"img/canh-ca-nau-ngot.jpg",
+  "Canh bầu nấu tôm":"img/canh-bau-nau-tom.jpg",
+  "Canh bí đao sườn non":"img/canh-bi-ao-suon-non.jpg",
+  "Canh khoai mỡ":"img/canh-khoai-mo.jpg",
+  "Canh rau dền tôm":"img/canh-rau-den-tom.jpg",
+  "Canh tập tàng":"img/canh-tap-tang.jpg",
+  "Canh hến nấu chua":"img/canh-hen-nau-chua.jpg",
+  "Canh ngao nấu dứa":"img/canh-ngao-nau-dua.jpg",
+  "Canh sườn hầm củ sen":"img/canh-suon-ham-cu-sen.jpg",
+  "Canh gà hầm thuốc bắc":"img/canh-ga-ham-thuoc-bac.jpg",
+  "Canh đuôi heo hầm":"img/canh-uoi-heo-ham.jpg",
+  "Canh sườn non nấu sấu":"img/canh-suon-non-nau-sau.jpg",
+  "Canh riêu cá":"img/canh-rieu-ca.jpg",
+  "Canh chua lươn":"img/canh-chua-luon.jpg",
+  "Canh măng chua cá":"img/canh-mang-chua-ca.jpg",
+  "Canh kim chi thịt bò":"img/canh-kim-chi-thit-bo.jpg",
+  "Canh rong biển thịt bò":"img/canh-rong-bien-thit-bo.jpg",
+  "Canh đậu hũ non hẹ":"img/canh-au-hu-non-he.jpg",
+  "Canh trứng cà chua":"img/canh-trung-ca-chua.jpg",
+  "Canh mướp nấu lạc":"img/canh-muop-nau-lac.jpg",
+  "Canh hoa thiên lý":"img/canh-hoa-thien-ly.jpg",
+  "Canh atiso hầm":"img/canh-atiso-ham.jpg",
+  "Canh củ quả thập cẩm":"img/canh-cu-qua-thap-cam.jpg",
+  "Canh khoai tây thịt bằm":"img/canh-khoai-tay-thit-bam.jpg",
+  "Canh su hào thịt bằm":"img/canh-su-hao-thit-bam.jpg",
+  "Canh cải thảo nấu tôm":"img/canh-cai-thao-nau-tom.jpg",
+  "Canh nấm thập cẩm":"img/canh-nam-thap-cam.jpg",
+  "Canh chua chay thập cẩm":"img/canh-chua-chay-thap-cam.jpg",
+  "Lẩu thái chua cay":"img/lau-thai-chua-cay.jpg",
+  "Lẩu riêu cua bắp bò":"img/lau-rieu-cua-bap-bo.jpg",
+  "Lẩu gà lá giang":"img/lau-ga-la-giang.jpg",
+  "Bún thang":"img/bun-thang.jpg",
+  "Bún ốc":"img/bun-oc.jpg",
+  "Bún măng gà":"img/bun-mang-ga.jpg",
+  "Bún sườn chua":"img/bun-suon-chua.jpg",
+  "Miến gà":"img/mien-ga.jpg",
+  "Miến lươn":"img/mien-luon.jpg",
+  "Phở cuốn":"img/pho-cuon.jpg",
+  "Bánh đa cua":"img/banh-a-cua.jpg",
+  "Bún hải sản":"img/bun-hai-san.jpg",
+  "Mì hoành thánh":"img/mi-hoanh-thanh.jpg",
+  "Cao lầu":"img/cao-lau.jpg",
+  "Bún bò Nam Bộ":"img/bun-bo-nam-bo.jpg",
+  "Đậu hũ chiên sả":"img/au-hu-chien-sa.jpg",
+  "Nấm đùi gà kho tiêu":"img/nam-ui-ga-kho-tieu.jpg",
+  "Bò kho chay":"img/bo-kho-chay.jpg",
+  "Cà ri chay":"img/ca-ri-chay.jpg",
+  "Hủ tiếu chay":"img/hu-tieu-chay.jpg",
+  "Phở chay":"img/pho-chay.jpg",
+  "Bún riêu chay":"img/bun-rieu-chay.jpg",
+  "Chả giò chay":"img/cha-gio-chay.jpg",
+  "Gỏi ngó sen chay":"img/goi-ngo-sen-chay.jpg",
+  "Đậu hũ Tứ Xuyên chay":"img/au-hu-tu-xuyen-chay.jpg",
+  "Nấm kho tộ chay":"img/nam-kho-to-chay.jpg",
+  "Canh kiểm chay":"img/canh-kiem-chay.jpg",
+  "Bánh ướt chay":"img/banh-uot-chay.jpg",
+  "Cơm tấm chay":"img/com-tam-chay.jpg",
+  "Lẩu chay thập cẩm":"img/lau-chay-thap-cam.jpg",
+  "Rau lang xào tỏi":"img/rau-lang-xao-toi.jpg",
+  "Cải thìa xào nấm":"img/cai-thia-xao-nam.jpg",
+  "Bông cải xào thịt":"img/bong-cai-xao-thit.jpg",
+  "Đậu que xào thịt bằm":"img/au-que-xao-thit-bam.jpg",
+  "Su su xào tỏi":"img/su-su-xao-toi.jpg",
+  "Nộm gà xé phay":"img/nom-ga-xe-phay.jpg",
+  "Nộm tai heo":"img/nom-tai-heo.jpg",
+  "Gỏi ngó sen tôm thịt":"img/goi-ngo-sen-tom-thit.jpg",
+  "Dưa chua":"img/dua-chua.jpg",
+  "Cà pháo mắm tôm":"img/ca-phao-mam-tom.jpg",
+  "Kim chi cải thảo":"img/kim-chi-cai-thao.jpg",
+  "Salad dầu giấm":"img/salad-dau-giam.jpg",
+  "Khoai tây chiên":"img/khoai-tay-chien.jpg",
+  "Ngô chiên bơ":"img/ngo-chien-bo.jpg",
+  "Chả ram bắp":"img/cha-ram-bap.jpg",
+  "Gỏi bưởi tôm thịt":"img/goi-buoi-tom-thit.jpg",
+  "Nộm hoa chuối":"img/nom-hoa-chuoi.jpg",
+  "Dưa leo trộn":"img/dua-leo-tron.jpg",
+  "Rau củ luộc chấm kho quẹt":"img/rau-cu-luoc-cham-kho-quet.jpg",
+  "Bắp cải xào":"img/bap-cai-xao.jpg",
+  "Mướp xào lòng gà":"img/muop-xao-long-ga.jpg",
+  "Thiên lý xào tỏi":"img/thien-ly-xao-toi.jpg",
+  "Sụn gà xào sả ớt":"img/sun-ga-xao-sa-ot.jpg",
+  "Chè đậu xanh":"img/che-au-xanh.jpg",
+};
+const $=id=>document.getElementById(id);
+const seedOf=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h;};
+const todayKey=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();};
+// ---- meal engine: each meal = 2-3 dishes ----
+function sShuffle(arr,salt){const a=[...arr];const rnd=seedOf(salt);
+  for(let i=a.length-1;i>0;i--){const j=(rnd+i*2654435761)%(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+const byCat=c=>DISHES.map((d,i)=>d[1]===c?i:-1).filter(i=>i>=0);
+function buildMeals(){
+  const K=todayKey();
+  const mans=sShuffle(byCat("man"),K+"man"),canhs=sShuffle(byCat("canh"),K+"canh"),
+        phus=sShuffle(byCat("phu"),K+"phu"),nuocs=sShuffle(byCat("nuoc"),K+"nuoc"),
+        chays=sShuffle(byCat("chay"),K+"chay");
+  const meals=[];let mi=0,ci=0,pi=0,ni=0,hi=0;
+  for(let m=0;m<14;m++){
+    const r=(seedOf(K+"type"+m)%100)/100;
+    if(r<0.62&&mans.length&&canhs.length&&phus.length){
+      meals.push({type:"com",dishes:[mans[mi++%mans.length],canhs[ci++%canhs.length],phus[pi++%phus.length]]});
+    }else if(r<0.84&&nuocs.length){
+      meals.push({type:"nuoc",dishes:[nuocs[ni++%nuocs.length]]});
+    }else if(chays.length){
+      const a=chays[hi++%chays.length];let b=chays[hi++%chays.length];
+      if(b===a)b=chays[hi++%chays.length];
+      meals.push({type:"chay",dishes:[a,b]});
+    }
+  }
+  return meals;
+}
+const MEALTYPE={com:"Bữa cơm",nuoc:"Bữa nước",chay:"Bữa chay"};
+let meals=buildMeals();
+let mealIdx=0, heroIdx=0, meal="trua", flipping=false, hintShown=false;
+function mealByTime(){const h=new Date().getHours();return (h>=5&&h<15)?"trua":"toi";}
+function curMeal(){return meals[((mealIdx%meals.length)+meals.length)%meals.length];}
+function curDishIdx(){const m=curMeal();return m.dishes[heroIdx%m.dishes.length];}
+
+function renderPage(el,mealObj,hIdx){
+  const di=mealObj.dishes[hIdx%mealObj.dishes.length], d=DISHES[di];
+  el.style.backgroundImage=`url('${IMG[d[0]]||""}')`;
+  const n=mealObj.dishes.length;
+  let combo="";
+  if(n>1){
+    combo=`<div class="comboLabel">Bữa này gồm ${n} món</div><div class="comboRow">`+
+      mealObj.dishes.map((x,i)=>{const dd=DISHES[x];
+        return `<div class="comboCard${i===hIdx?" on":""}" onclick="setHero(${i})"><img src="${IMG[dd[0]]||""}" alt=""><span>${dd[0]}</span></div>`;
+      }).join("")+`</div>`;
+  }
+  el.innerHTML=`<div class="shade"></div><div class="ptxt">
+    <div class="overline">${MEALN[meal]} &nbsp;·&nbsp; <b>${MEALTYPE[mealObj.type].toUpperCase()}</b>${n>1?" &nbsp;·&nbsp; "+n+" MÓN":""}</div>
+    <h1>${d[0]}</h1>
+    <p class="desc">${d[2]}</p>
+    ${combo}
+    <div class="metaRow">${I.clock}<span>${d[3]}</span><span class="dot">·</span>${I.flame}<span>${difficulty(d[3])}</span></div>
+    <div class="ctaRow"><button class="cta" onclick="openRecipe()">Xem cách nấu ${I.arrow}</button></div>
+  </div>`;
+}
+function setHero(i){heroIdx=i;renderPage($("pageTop"),curMeal(),heroIdx);}
+function renderAll(){
+  const m=curMeal(), total=meals.length, cur=((mealIdx%total)+total)%total+1;
+  renderPage($("pageTop"),m,heroIdx);
+  const nm=meals[(((mealIdx+1)%total)+total)%total];
+  renderPage($("pageUnder"),nm,0);
+  $("counter").textContent=String(cur).padStart(2,"0")+" / "+total;
+  document.querySelectorAll("#mealSeg button").forEach(b=>b.classList.toggle("on",b.dataset.m===meal));
+}
+function flip(dir){
+  if(flipping)return; flipping=true;
+  const top=$("pageTop");
+  const delta=(dir==="L"||dir==="U")?1:-1;
+  const total=meals.length;
+  const tm=meals[(((mealIdx+delta)%total)+total)%total];
+  renderPage($("pageUnder"),tm,0);
+  const cls={L:"flipL",R:"flipR",U:"flipU",D:"flipD"}[dir];
+  // force reflow then animate
+  top.classList.remove("flipL","flipR","flipU","flipD"); void top.offsetWidth;
+  requestAnimationFrame(()=>top.classList.add(cls));
+  setTimeout(()=>{
+    mealIdx+=delta; heroIdx=0;
+    renderAll();
+    top.classList.remove(cls);
+    flipping=false;
+    if(!hintShown){hintShown=true;$("hint").style.opacity="0";}
+  },640);
+}
+// swipe
+(function(){
+  const st=$("stage");let x0=0,y0=0;
+  st.addEventListener("touchstart",e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;},{passive:true});
+  st.addEventListener("touchend",e=>{
+    const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;
+    if(Math.abs(dx)<40&&Math.abs(dy)<40)return;
+    if(Math.abs(dx)>Math.abs(dy)) flip(dx<0?"L":"R"); else flip(dy<0?"U":"D");
+  },{passive:true});
+  // mouse for desktop
+  let mx0=0,my0=0,down=false;
+  st.addEventListener("mousedown",e=>{down=true;mx0=e.clientX;my0=e.clientY;});
+  st.addEventListener("mouseup",e=>{if(!down)return;down=false;
+    const dx=e.clientX-mx0,dy=e.clientY-my0;
+    if(Math.abs(dx)<40&&Math.abs(dy)<40)return;
+    if(Math.abs(dx)>Math.abs(dy)) flip(dx<0?"L":"R"); else flip(dy<0?"U":"D");
+  });
+})();
+// meal segmented control: jump to daily dish of that meal
+document.querySelectorAll("#mealSeg button").forEach(b=>b.onclick=()=>{
+  meal=b.dataset.m;
+  mealIdx=(meal==="trua")?0:1; heroIdx=0;
+  renderAll();
+});
+// sheet
+const wrap=$("sheetWrap");
+$("bellBtn").onclick=()=>wrap.classList.add("open");
+$("scrim").onclick=()=>wrap.classList.remove("open");
+// notifications
+const timers={};
+async function ensurePerm(){
+  if(!("Notification" in window))return false;
+  if(Notification.permission==="default")await Notification.requestPermission();
+  return Notification.permission==="granted";
+}
+function scheduleMeal(key,hour,title){
+  clearTimeout(timers[key]);
+  const now=new Date(),t=new Date();t.setHours(hour,0,0,0);
+  if(t<=now)t.setDate(t.getDate()+1);
+  timers[key]=setTimeout(()=>{
+    const m=meals[(key==="trua")?0:1]||meals[0];
+    const names=m.dishes.map(x=>DISHES[x][0]).join(", ");
+    try{new Notification(title,{body:"Hôm nay: "+names});}catch(e){}
+    scheduleMeal(key,hour,title);
+  },t-now);
+}
+function bindSwitch(id,key,hour,title){
+  const el=$(id), saved=localStorage.getItem("hag_n_"+key)==="1";
+  if(saved){el.classList.add("on");scheduleMeal(key,hour,title);}
+  el.onclick=async()=>{
+    if(el.classList.contains("on")){el.classList.remove("on");clearTimeout(timers[key]);localStorage.setItem("hag_n_"+key,"0");}
+    else if(await ensurePerm()){el.classList.add("on");localStorage.setItem("hag_n_"+key,"1");scheduleMeal(key,hour,title);}
+  };
+}
+bindSwitch("swTrua","trua",11,"Trưa nay ăn gì?");
+bindSwitch("swToi","toi",17,"Tối nay ăn gì?");
+$("btnTest").onclick=async()=>{
+  if(await ensurePerm()){try{
+    const mt=meals[0]?meals[0].dishes.map(x=>DISHES[x][0]).join(", "):"";
+    const mo=meals[1]?meals[1].dishes.map(x=>DISHES[x][0]).join(", "):"";
+    new Notification("Hôm Nay Ăn Gì?",{body:"Trưa: "+mt+" · Tối: "+mo});}catch(e){}}
+};
+// init: time-aware
+meal=mealByTime();
+mealIdx=(meal==="trua")?0:1; heroIdx=0;
+renderAll();
+</script>
+
+<div id="recipeWrap">
+  <div id="rScrim"></div>
+  <div id="rSheet">
+    <div id="rHead"><button id="rClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <div id="rTitle"><div class="overline" id="rOver"></div><h2 id="rName"></h2></div>
+    </div>
+    <div id="rBody">
+      <div class="secHead"><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 11 4-7"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.6-7.4"/></svg></span><h3>Nguyên liệu</h3><span class="cnt" id="rIngCnt"></span></div>
+      <div class="ingGrid" id="rIng"></div>
+      <div class="secHead"><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><path d="M6 17h12"/></svg></span><h3>Cách làm</h3><span class="cnt" id="rStepCnt"></span></div>
+      <div id="rSteps"></div>
+    </div>
+  </div>
+</div>
+<script>
+/*RECIPES in recipes.js*/function curDish(){return DISHES[curDishIdx()];}
+function openRecipe(){
+  const d=curDish(), r=RECIPES[d[0]];
+  if(!r)return;
+  $("rHead").style.backgroundImage=`url('${IMG[d[0]]}')`;
+  $("rName").textContent=d[0];
+  $("rOver").textContent=MEALN[meal]+" · "+CATS[d[1]].toUpperCase();
+  $("rIngCnt").textContent=r.i.length+" món";
+  $("rStepCnt").textContent=r.s.length+" bước";
+  $("rIng").innerHTML=r.i.map(x=>`<div class="ing"><div class="ic">${x[0]}</div><div class="nm">${x[1]}</div><div class="qt">${x[2]}</div></div>`).join("");
+  $("rSteps").innerHTML=r.s.map((s,i)=>`<div class="step"><div class="num">${i+1}</div><div class="tx">${s}</div></div>`).join("");
+  $("recipeWrap").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+function closeRecipe(){$("recipeWrap").classList.remove("open");document.body.style.overflow="";}
+$("rClose").onclick=closeRecipe;
+$("rScrim").onclick=closeRecipe;
+</script>
+</body>
+</html>
